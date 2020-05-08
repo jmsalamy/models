@@ -20,6 +20,8 @@ from __future__ import print_function
 
 import tensorflow as tf
 
+import horovod.tensorflow as hvd
+
 from official.modeling import performance
 from official.staging.training import grad_utils
 from official.staging.training import standard_runnable
@@ -81,7 +83,8 @@ class ResnetRunnable(standard_runnable.StandardTrainable,
         boundaries=list(p[1] for p in common.LR_SCHEDULE[1:]),
         multipliers=list(p[0] for p in common.LR_SCHEDULE),
         compute_lr_on_cpu=True)
-    self.optimizer = common.get_optimizer(lr_schedule)
+    #scale learning rate by number of workers
+    self.optimizer = common.get_optimizer(lr_schedule*hvd.size())
     # Make sure iterations variable is created inside scope.
     self.global_step = self.optimizer.iterations
 
@@ -103,11 +106,14 @@ class ResnetRunnable(standard_runnable.StandardTrainable,
         'test_accuracy', dtype=tf.float32)
 
     self.checkpoint = tf.train.Checkpoint(
-        model=self.model, optimizer=self.optimizer)
+        model=self.model, optimizer=self.optimizer) if hvd.rank(0) else None
 
     # Handling epochs.
     self.epoch_steps = epoch_steps
     self.epoch_helper = utils.EpochHelper(epoch_steps, self.global_step)
+
+    #as part of init, bcast variables
+    hvd.broadcast_variables()
 
   def build_train_dataset(self):
     """See base class."""
@@ -149,7 +155,8 @@ class ResnetRunnable(standard_runnable.StandardTrainable,
     def step_fn(inputs):
       """Function to run on the device."""
       images, labels = inputs
-      with tf.GradientTape() as tape:
+      #wrapped 
+      with hvd.DistributedGradientTape(tf.GradientTape()) as tape:
         logits = self.model(images, training=True)
 
         prediction_loss = tf.keras.losses.sparse_categorical_crossentropy(
