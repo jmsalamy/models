@@ -32,6 +32,7 @@ import os
 from absl import flags
 import tensorflow as tf
 from tensorflow.contrib.data.python.ops import threadpool
+import horovod.tensorflow as hvd
 
 from official.resnet import resnet_model
 from official.utils.flags import core as flags_core
@@ -376,6 +377,7 @@ def resnet_model_fn(features, labels, mode, model_class,
         learning_rate=learning_rate,
         momentum=momentum
     )
+    optimizer = hvd.DistributedOptimizer(optimizer)
 
     def _dense_grad_filter(gvs):
       """Only apply gradient updates to the final layer.
@@ -469,6 +471,7 @@ def resnet_main(
       inter_op_parallelism_threads=flags_obj.inter_op_parallelism_threads,
       intra_op_parallelism_threads=flags_obj.intra_op_parallelism_threads,
       allow_soft_placement=True)
+  session_config.gpu_options.visible_device_list = str(hvd.local_rank())
 
   distribution_strategy = distribution_utils.get_distribution_strategy(
       flags_core.get_num_gpus(flags_obj), flags_obj.all_reduce_alg)
@@ -489,7 +492,7 @@ def resnet_main(
     warm_start_settings = None
 
   classifier = tf.estimator.Estimator(
-      model_fn=model_function, model_dir=flags_obj.model_dir, config=run_config,
+      model_fn=model_function, model_dir=flags_obj.model_dir+str(hvd.rank()), config=run_config,
       warm_start_from=warm_start_settings, params={
           'resnet_size': int(flags_obj.resnet_size),
           'data_format': flags_obj.data_format,
@@ -519,7 +522,7 @@ def resnet_main(
       flags_obj.hooks,
       model_dir=flags_obj.model_dir,
       batch_size=flags_obj.batch_size)
-
+  train_hooks.append(hvd.BroadcastGlobalVariablesHook(0))
   def input_fn_train(num_epochs):
     return input_function(
         is_training=True,
@@ -561,7 +564,7 @@ def resnet_main(
 
     if num_train_epochs:
       classifier.train(input_fn=lambda: input_fn_train(num_train_epochs),
-                       hooks=train_hooks, max_steps=flags_obj.max_train_steps)
+                       hooks=train_hooks, steps=flags_obj.max_train_steps)
 
     tf.logging.info('Starting to evaluate.')
 

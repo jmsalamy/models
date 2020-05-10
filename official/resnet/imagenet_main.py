@@ -19,7 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-
+import horovod.tensorflow as hvd
 from absl import app as absl_app
 from absl import flags
 import tensorflow as tf  # pylint: disable=g-bad-import-order
@@ -55,7 +55,7 @@ def get_filenames(is_training, data_dir):
         for i in range(_NUM_TRAIN_FILES)]
   else:
     return [
-        os.path.join(data_dir, 'validation-%05d-of-00128' % i)
+        os.path.join(data_dir, 'val-%05d-of-00128' % i)
         for i in range(128)]
 
 
@@ -347,6 +347,7 @@ def run_imagenet(flags_obj):
 
 
 def main(_):
+  hvd.init()
   with logger.benchmark_context(flags.FLAGS):
     run_imagenet(flags.FLAGS)
 
