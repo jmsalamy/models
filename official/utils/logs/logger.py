@@ -329,11 +329,14 @@ def _process_metric_to_json(
     return None
 
   extras = _convert_to_json_dict(extras)
+
+  #this is causing a warning we need to fix
+  print(value)
   return {
       "name": name,
       "value": float(value),
       "unit": unit,
-      "global_step": global_step,
+      "global_step": int(global_step),
       "timestamp": datetime.datetime.utcnow().strftime(
           _DATE_TIME_FORMAT_PATTERN),
       "extras": extras}
