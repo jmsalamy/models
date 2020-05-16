@@ -467,10 +467,11 @@ def resnet_main(
 
   # Creates session config. allow_soft_placement = True, is required for
   # multi-GPU and is not harmful for other modes.
-  session_config = tf.ConfigProto(
-      inter_op_parallelism_threads=flags_obj.inter_op_parallelism_threads,
-      intra_op_parallelism_threads=flags_obj.intra_op_parallelism_threads,
-      allow_soft_placement=True)
+  session_config = tf.ConfigProto()
+      #inter_op_parallelism_threads=flags_obj.inter_op_parallelism_threads,
+      #intra_op_parallelism_threads=flags_obj.intra_op_parallelism_threads,
+      #allow_soft_placement=True)
+  session_config.gpu_options.allow_growth = True
   session_config.gpu_options.visible_device_list = str(hvd.local_rank())
 
   distribution_strategy = distribution_utils.get_distribution_strategy(
