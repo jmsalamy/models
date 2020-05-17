@@ -202,6 +202,7 @@ def override_flags_and_set_envars_for_gpu_thread_pool(flags_obj):
 
   # Sets up thread pool for each GPU for op scheduling.
   per_gpu_thread_count = 1
+  print(flags_obj.num_gpus)
   total_gpu_thread_count = per_gpu_thread_count * flags_obj.num_gpus
   os.environ['TF_GPU_THREAD_MODE'] = flags_obj.tf_gpu_thread_mode
   os.environ['TF_GPU_THREAD_COUNT'] = str(per_gpu_thread_count)
@@ -264,7 +265,7 @@ def learning_rate_with_decay(
           initial_learning_rate * tf.cast(global_step, tf.float32) / tf.cast(
               warmup_steps, tf.float32))
       return tf.cond(global_step < warmup_steps, lambda: warmup_lr, lambda: lr)
-    return lr
+    return lr * hvd.size() #account for number of workers
 
   return learning_rate_fn
 
@@ -462,26 +463,28 @@ def resnet_main(
   model_helpers.apply_clean(flags.FLAGS)
 
   # Ensures flag override logic is only executed if explicitly triggered.
+  print(flags_obj.tf_gpu_thread_mode)
   if flags_obj.tf_gpu_thread_mode:
     override_flags_and_set_envars_for_gpu_thread_pool(flags_obj)
 
   # Creates session config. allow_soft_placement = True, is required for
   # multi-GPU and is not harmful for other modes.
-  session_config = tf.ConfigProto()
+  config = tf.ConfigProto()
+  config.gpu_options.visible_device_list = str(hvd.local_rank())
       #inter_op_parallelism_threads=flags_obj.inter_op_parallelism_threads,
       #intra_op_parallelism_threads=flags_obj.intra_op_parallelism_threads,
-      #allow_soft_placement=True)
-  session_config.gpu_options.allow_growth = True
-  session_config.gpu_options.visible_device_list = str(hvd.local_rank())
+      #)
+  
 
-  distribution_strategy = distribution_utils.get_distribution_strategy(
-      flags_core.get_num_gpus(flags_obj), flags_obj.all_reduce_alg)
+  #distribution_strategy = distribution_utils.get_distribution_strategy(
+  #    flags_core.get_num_gpus(flags_obj), flags_obj.all_reduce_alg)
 
   # Creates a `RunConfig` that checkpoints every 24 hours which essentially
   # results in checkpoints determined only by `epochs_between_evals`.
   run_config = tf.estimator.RunConfig(
-      train_distribute=distribution_strategy,
-      session_config=session_config,
+      #train_distribute=distribution_strategy,
+      log_step_count_steps=1,
+      session_config=config,
       save_checkpoints_secs=60*60*24)
 
   # Initializes model with all but the dense layer from pretrained ResNet.
@@ -585,16 +588,17 @@ def resnet_main(
       break
 
   if flags_obj.export_dir is not None:
-    # Exports a saved model for the given classifier.
-    export_dtype = flags_core.get_tf_dtype(flags_obj)
-    if flags_obj.image_bytes_as_serving_input:
-      input_receiver_fn = functools.partial(
-          image_bytes_serving_input_fn, shape, dtype=export_dtype)
-    else:
-      input_receiver_fn = export.build_tensor_serving_input_receiver_fn(
-          shape, batch_size=flags_obj.batch_size, dtype=export_dtype)
-    classifier.export_savedmodel(flags_obj.export_dir, input_receiver_fn,
-                                 strip_default_attrs=True)
+    if hvd.rank() == 0:
+      # Exports a saved model for the given classifier.
+      export_dtype = flags_core.get_tf_dtype(flags_obj)
+      if flags_obj.image_bytes_as_serving_input:
+        input_receiver_fn = functools.partial(
+            image_bytes_serving_input_fn, shape, dtype=export_dtype)
+      else:
+        input_receiver_fn = export.build_tensor_serving_input_receiver_fn(
+            shape, batch_size=flags_obj.batch_size, dtype=export_dtype)
+      classifier.export_savedmodel(flags_obj.export_dir, input_receiver_fn,
+                                  strip_default_attrs=True)
   return eval_results
 
 def define_resnet_flags(resnet_size_choices=None):
