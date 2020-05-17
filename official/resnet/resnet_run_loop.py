@@ -471,7 +471,8 @@ def resnet_main(
   # multi-GPU and is not harmful for other modes.
   config = tf.ConfigProto()
   config.gpu_options.visible_device_list = str(hvd.local_rank())
-      #inter_op_parallelism_threads=flags_obj.inter_op_parallelism_threads,
+  config.gpu_options.allow_growth = True
+  #inter_op_parallelism_threads=flags_obj.inter_op_parallelism_threads,
       #intra_op_parallelism_threads=flags_obj.intra_op_parallelism_threads,
       #)
   
