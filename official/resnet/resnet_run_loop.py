@@ -475,7 +475,7 @@ def resnet_main(
   #inter_op_parallelism_threads=flags_obj.inter_op_parallelism_threads,
       #intra_op_parallelism_threads=flags_obj.intra_op_parallelism_threads,
       #)
-  
+  print(hvd.local_rank())
 
   #distribution_strategy = distribution_utils.get_distribution_strategy(
   #    flags_core.get_num_gpus(flags_obj), flags_obj.all_reduce_alg)
@@ -497,7 +497,7 @@ def resnet_main(
     warm_start_settings = None
 
   classifier = tf.estimator.Estimator(
-      model_fn=model_function, model_dir=flags_obj.model_dir+str(hvd.rank()), config=run_config,
+      model_fn=model_function, model_dir=flags_obj.model_dir+str(hvd.local_rank()), config=run_config,
       warm_start_from=warm_start_settings, params={
           'resnet_size': int(flags_obj.resnet_size),
           'data_format': flags_obj.data_format,
@@ -589,7 +589,7 @@ def resnet_main(
       break
 
   if flags_obj.export_dir is not None:
-    if hvd.rank() == 0:
+    if hvd.local_rank() == 0:
       # Exports a saved model for the given classifier.
       export_dtype = flags_core.get_tf_dtype(flags_obj)
       if flags_obj.image_bytes_as_serving_input:
