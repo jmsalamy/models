@@ -1,0 +1,59 @@
+To run alexnet accuracy convergence with drops test:
+1) Activate conda environment
+2) Compile horovod with the panama all reduce src files (found in panama_allreduce/panama_src_drop) and the correct drop percentage (the total drop percentage is the drop percentage on one server times 4) on ALL four servers
+3) Run the following command on roodabeh
+
+mpirun --allow-run-as-root --tag-output -np 4 -H localhost,tsu@soodabeh.csail.mit.edu,tsu@gordafarid.csail.mit.edu,tsu@tahmineh.csail.mit.edu -bind-to none -map-by slot -mca pml ob1 -mca btl ^openib  -mca btl_tcp_if_include eno1 -x NCCL_DEBUG=INFO -x NCCL_SOCKET_IFNAME=eno1 -x CONDA_SHLVL -x LD_LIBRARY_PATH -x CONDA_EXE -x SSH_CONNECTION -x LANG -x SWT_GTK3 -x CONDA_PREFIX -x _CE_M -x XDG_SESSION_ID -x USER -x XILINXD_LICENSE_FILE -x PWD -x HOME -x SSH_CLIENT -x KRB5CCNAME -x _CE_CONDA -x CONDA_PROMPT_MODIFIER -x SSH_TTY -x MAIL -x TERM -x SHELL -x SHLVL -x LANGUAGE -x LOGNAME -x  DBUS_SESSION_BUS_ADDRESS -x PATH -x CONDA_DEFAULT_ENV --verbose python horovod_alexnet.py |& sudo tee alexnet_drop.txt
+
+This runs alexnet on 4 servers over the eno1 network, it writes the output to the terminal and to the file specified
+
+NOTE: you cannot activate a conda environment in a script, so you cannot automate tests in that way
+
+
+To run resnet accuracy convergence with drops test:
+1) Download resnet
+	git clone --single-branch --branch r1.13.0 https://github.com/tensorflow/models.git
+	add this to bashrc and source: export PYTHONPATH="$PYTHONPATH:~/models"
+	pip install --user -r official/requirements.txt
+2) Edit resnet to be horovod compatible
+	models/official/resnet/resnet_run_loop.py
+		L34 add import horovod.tensorflow as hvd
+		L492 + str(hvd.rank()) to model dir (this is because on different jobs the model overwrites each other on the same server causing errors)
+		L564 change max_steps to steps (in order to get steps per epoch instead of max global steps)
+		L379 add optimizer = hvd.DistributedOptimizer(optimizer)
+		L522 add train_hooks.append(hvd.BroadcastGlobalVariablesHook(0))
+		L472 add session_config.gpu_options.visible_device_list = str(hvd.local_rank())
+	models/official/resnet/imagenet_main.py
+		L22 add import horovod.tensorflow as hvd
+		L58 change validation to val (to match our processed imagenet)
+		L349 under def main(_): put hvd.init()
+2) Activate conda environment
+3) Compile horovod with the panama all reduce src files (found in panama_allreduce/panama_src_drop) and the correct drop percentage (the total drop percentage is the drop percentage on one server times 4) on ALL four servers
+4) Run the following command on roodabeh
+
+mpirun --allow-run-as-root --tag-output -np 4 -H localhost,tsu@soodabeh.csail.mit.edu,tsu@gordafarid.csail.mit.edu,tsu@tahmineh.csail.mit.edu -bind-to none -map-by slot -mca pml ob1 -mca btl ^openib  -mca btl_tcp_if_include eno1 -x NCCL_DEBUG=INFO -x NCCL_SOCKET_IFNAME=eno1 -x CONDA_SHLVL -x LD_LIBRARY_PATH -x CONDA_EXE -x SSH_CONNECTION -x LANG -x SWT_GTK3 -x CONDA_PREFIX -x _CE_M -x XDG_SESSION_ID -x USER -x XILINXD_LICENSE_FILE -x PWD -x HOME -x SSH_CLIENT -x KRB5CCNAME -x _CE_CONDA -x CONDA_PROMPT_MODIFIER -x SSH_TTY -x MAIL -x TERM -x SHELL -x SHLVL -x LANGUAGE -x LOGNAME -x  DBUS_SESSION_BUS_ADDRESS -x PATH -x CONDA_DEFAULT_ENV --verbose python ~/models/official/resnet/imagenet_main.py --batch_size 64 --data_dir /usr/data/imagenet/processed/combined/ --resnet_size 50 --train_epochs 10 --max_train_steps 500 --benchmark_logger_type BenchmarkFileLogger --benchmark_log_dir resnet50_drop0_benchmark --model_dir resnet_model_dir --resnet_version 1 |& tee resnet50_drop0.txt 
+
+Add -x PYTHONPATH=PYTHONPATH:~/models to command above to get it to work on gcloud servers
+
+This runs resnet50 on 4 servers for 10 epochs of 500 steps each and batch size 64 over the eno1 network, imagenet images are pulled from /usr/data/imagenet/processed/combined it writes the output to the terminal and to the file specified
+
+NOTE: In order to make this work on gcloud servers must implement all the changes in these two links
+https://github.com/horovod/horovod/issues/676
+https://stackoverflow.com/questions/44232898/memoryerror-in-tensorflow-and-successful-numa-node-read-from-sysfs-had-negativ/44233285#44233285
+EXCEPT this change: os.environ['CUDA_VISIBLE_DEVICES'] = str(hvd.local_rank())
+
+Setting up gcloud server with Horovod:
+1) Run on each gcloud instance
+	setupGCloud.sh
+	Hit enter through first prompt and yes for second prompt
+2) Set up ssh between each instance
+	Run make_and_send_keys.sh on all (change zone and server names)
+	The run accept_keys.sh
+	Ssh into each server from other and accept prompts
+	Test with pssh -h ~/.pssh_hosts_file "uptime" (pssh_hosts_files has all the servers in it)
+3) To move imagenet images between servers use scp after step 2
+4) Test if training is working
+	pip install gpustat to monitor gpu 
+	mpirun -np 1 -H localhost --oversubscribe -bind-to none -map-by slot -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include ens8 python_file.py
+
+
