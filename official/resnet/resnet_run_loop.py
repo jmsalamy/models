@@ -248,7 +248,7 @@ def learning_rate_with_decay(
     for training the next batch.
   """
   initial_learning_rate = base_lr * batch_size / batch_denom
-  batches_per_epoch = num_images / batch_size
+  batches_per_epoch = num_images / (batch_size * hvd.size())
 
   # Reduce the learning rate at certain epochs.
   # CIFAR-10: divide by 10 at epoch 100, 150, and 200

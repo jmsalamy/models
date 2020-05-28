@@ -306,7 +306,7 @@ def imagenet_model_fn(features, labels, mode, params):
   #modify to ensure decay at right spots
   learning_rate_fn = resnet_run_loop.learning_rate_with_decay(
       batch_size=params['batch_size'], batch_denom=256,
-      num_images=500*params['batch_size'], boundary_epochs=[30, 60, 80, 90],
+      num_images=NUM_IMAGES['train'], boundary_epochs=[30, 60, 80, 90],
       decay_rates=[1, 0.1, 0.01, 0.001, 1e-4], warmup=warmup, base_lr=base_lr * hvd.size())
 
   #learning_rate_fn = resnet_run_loop.learning_rate_with_decay(
