@@ -248,7 +248,7 @@ def learning_rate_with_decay(
     for training the next batch.
   """
   initial_learning_rate = base_lr * batch_size / batch_denom
-  batches_per_epoch = num_images / (batch_size * hvd.size())
+  batches_per_epoch = num_images
 
   # Reduce the learning rate at certain epochs.
   # CIFAR-10: divide by 10 at epoch 100, 150, and 200
@@ -258,8 +258,8 @@ def learning_rate_with_decay(
 
   def learning_rate_fn(global_step):
     """Builds scaled learning rate function with 5 epoch warm up."""
-    lr = tf.train.piecewise_constant(global_step, boundaries, vals) * hvd.size()
-    print(lr)
+    lr = tf.train.piecewise_constant(global_step, boundaries, vals)
+
     if warmup:
       warmup_steps = int(batches_per_epoch * 5)
       warmup_lr = (
@@ -516,6 +516,7 @@ def resnet_main(
       'resnet_version': flags_obj.resnet_version,
       'synthetic_data': flags_obj.use_synthetic_data,
       'train_epochs': flags_obj.train_epochs,
+      'max_steps': flags_obj.max_train_steps,
   }
   if flags_obj.use_synthetic_data:
     dataset_name = dataset_name + '-synthetic'
