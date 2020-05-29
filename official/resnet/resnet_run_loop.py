@@ -506,7 +506,8 @@ def resnet_main(
           'resnet_version': int(flags_obj.resnet_version),
           'loss_scale': flags_core.get_loss_scale(flags_obj),
           'dtype': flags_core.get_tf_dtype(flags_obj),
-          'fine_tune': flags_obj.fine_tune
+          'fine_tune': flags_obj.fine_tune,
+          'max_steps': flags_obj.max_train_steps
       })
 
   run_params = {
@@ -516,7 +517,6 @@ def resnet_main(
       'resnet_version': flags_obj.resnet_version,
       'synthetic_data': flags_obj.use_synthetic_data,
       'train_epochs': flags_obj.train_epochs,
-      'max_steps': flags_obj.max_train_steps,
   }
   if flags_obj.use_synthetic_data:
     dataset_name = dataset_name + '-synthetic'
