@@ -265,7 +265,7 @@ def learning_rate_with_decay(
 
   def learning_rate_fn(global_step):
     """Builds scaled learning rate function with 5 epoch warm up."""
-    lr = tf.train.piecewise_constant(global_step, boundaries, vals)
+    lr = tf.compat.v1.train.piecewise_constant(global_step, boundaries, vals)
 
     if warmup:
       warmup_steps = int(batches_per_epoch * 5)
