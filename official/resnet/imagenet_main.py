@@ -50,9 +50,11 @@ DATASET_NAME = 'ImageNet'
 def get_filenames(is_training, data_dir):
   """Return filenames for dataset."""
   if is_training:
+    from itertools import chain
+    concat = chain(range(652),range(704,1024))
     return [
         os.path.join(data_dir, 'train-%05d-of-01024' % i)
-        for i in range(_NUM_TRAIN_FILES)]
+        for i in concat] #range(_NUM_TRAIN_FILES)]
   else:
     return [
         os.path.join(data_dir, 'val-%05d-of-00128' % i)
