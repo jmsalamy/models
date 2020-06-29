@@ -160,9 +160,9 @@ class BenchmarkFileLogger(BaseBenchmarkLogger):
   def __init__(self, logging_dir):
     super(BenchmarkFileLogger, self).__init__()
     self._logging_dir = logging_dir
-    if not tf.gfile.IsDirectory(self._logging_dir):
-      tf.gfile.MakeDirs(self._logging_dir)
-    self._metric_file_handler = tf.gfile.GFile(
+    if not tf.compat.v1.gfile.IsDirectory(self._logging_dir):
+      tf.compat.v1.gfile.MakeDirs(self._logging_dir)
+    self._metric_file_handler = tf.compat.v1.gfile.GFile(
         os.path.join(self._logging_dir, METRIC_LOG_FILE_NAME), "a")
 
   def log_metric(self, name, value, unit=None, global_step=None, extras=None):
