@@ -374,7 +374,7 @@ def resnet_model_fn(features, labels, mode, model_class,
   loss = cross_entropy + l2_loss
 
   if mode == tf.estimator.ModeKeys.TRAIN:
-    global_step = tf.train.get_or_create_global_step()
+    global_step = tf.compat.v1.train.get_or_create_global_step()
 
     learning_rate = learning_rate_fn(global_step)
 
@@ -382,7 +382,7 @@ def resnet_model_fn(features, labels, mode, model_class,
     tf.identity(learning_rate, name='learning_rate')
     tf.summary.scalar('learning_rate', learning_rate)
 
-    optimizer = tf.train.MomentumOptimizer(
+    optimizer = tf.compat.v1.train.MomentumOptimizer(
         learning_rate=learning_rate,
         momentum=momentum
     )
