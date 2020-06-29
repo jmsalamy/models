@@ -368,7 +368,7 @@ def resnet_model_fn(features, labels, mode, model_class,
   # Add weight decay to the loss.
   l2_loss = weight_decay * tf.add_n(
       # loss is computed using fp32 for numerical stability.
-      [tf.nn.l2_loss(tf.cast(v, tf.float32)) for v in tf.trainable_variables()
+      [tf.nn.l2_loss(tf.cast(v, tf.float32)) for v in tf.compat.v1.trainable_variables()
        if loss_filter_fn(v.name)])
   tf.summary.scalar('l2_loss', l2_loss)
   loss = cross_entropy + l2_loss
