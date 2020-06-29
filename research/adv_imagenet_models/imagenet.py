@@ -85,15 +85,15 @@ def get_split(split_name, dataset_dir, file_pattern=None, reader=None):
           [], dtype=tf.int64, default_value=-1),
       'image/class/text': tf.io.FixedLenFeature(
           [], dtype=tf.string, default_value=''),
-      'image/object/bbox/xmin': tf.VarLenFeature(
+      'image/object/bbox/xmin': tf.io.VarLenFeature(
           dtype=tf.float32),
-      'image/object/bbox/ymin': tf.VarLenFeature(
+      'image/object/bbox/ymin': tf.io.VarLenFeature(
           dtype=tf.float32),
-      'image/object/bbox/xmax': tf.VarLenFeature(
+      'image/object/bbox/xmax': tf.io.VarLenFeature(
           dtype=tf.float32),
-      'image/object/bbox/ymax': tf.VarLenFeature(
+      'image/object/bbox/ymax': tf.io.VarLenFeature(
           dtype=tf.float32),
-      'image/object/class/label': tf.VarLenFeature(
+      'image/object/class/label': tf.io.VarLenFeature(
           dtype=tf.int64),
   }
 
