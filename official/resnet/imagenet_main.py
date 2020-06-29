@@ -95,11 +95,11 @@ def _parse_example_proto(example_serialized):
   """
   # Dense features in Example proto.
   feature_map = {
-      'image/encoded': tf.FixedLenFeature([], dtype=tf.string,
+      'image/encoded': tf.io.FixedLenFeature([], dtype=tf.string,
                                           default_value=''),
-      'image/class/label': tf.FixedLenFeature([], dtype=tf.int64,
+      'image/class/label': tf.io.FixedLenFeature([], dtype=tf.int64,
                                               default_value=-1),
-      'image/class/text': tf.FixedLenFeature([], dtype=tf.string,
+      'image/class/text': tf.io.FixedLenFeature([], dtype=tf.string,
                                              default_value=''),
   }
   sparse_float32 = tf.VarLenFeature(dtype=tf.float32)
