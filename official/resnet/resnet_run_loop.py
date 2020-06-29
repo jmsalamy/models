@@ -89,7 +89,7 @@ def process_record_dataset(dataset,
 
   # Parses the raw records into images and labels.
   dataset = dataset.apply(
-      tf.contrib.data.map_and_batch(
+      tf.compat.v1.data.experimental.map_and_batch(
           lambda value: parse_record_fn(value, is_training, dtype),
           batch_size=batch_size,
           num_parallel_batches=num_parallel_batches,
