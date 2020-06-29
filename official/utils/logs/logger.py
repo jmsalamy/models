@@ -204,7 +204,7 @@ class BenchmarkFileLogger(BaseBenchmarkLogger):
     """
     run_info = _gather_run_info(model_name, dataset_name, run_params, test_id)
 
-    with tf.gfile.GFile(os.path.join(
+    with tf.compat.v1.gfile.GFile(os.path.join(
         self._logging_dir, BENCHMARK_RUN_LOG_FILE_NAME), "w") as f:
       try:
         json.dump(run_info, f)
