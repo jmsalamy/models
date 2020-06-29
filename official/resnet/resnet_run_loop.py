@@ -420,7 +420,7 @@ def resnet_model_fn(features, labels, mode, model_class,
         grad_vars = _dense_grad_filter(grad_vars)
       minimize_op = optimizer.apply_gradients(grad_vars, global_step)
 
-    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    update_ops = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)
     train_op = tf.group(minimize_op, update_ops)
   else:
     train_op = None
