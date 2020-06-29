@@ -57,17 +57,17 @@ Eval:
 
 
 _TRAIN_FEATURE_MAP = {
-    movielens.USER_COLUMN: tf.FixedLenFeature([], dtype=tf.string),
-    movielens.ITEM_COLUMN: tf.FixedLenFeature([], dtype=tf.string),
-    rconst.MASK_START_INDEX: tf.FixedLenFeature([1], dtype=tf.string),
-    "labels": tf.FixedLenFeature([], dtype=tf.string),
+    movielens.USER_COLUMN: tf.io.FixedLenFeature([], dtype=tf.string),
+    movielens.ITEM_COLUMN: tf.io.FixedLenFeature([], dtype=tf.string),
+    rconst.MASK_START_INDEX: tf.io.FixedLenFeature([1], dtype=tf.string),
+    "labels": tf.io.FixedLenFeature([], dtype=tf.string),
 }
 
 
 _EVAL_FEATURE_MAP = {
-    movielens.USER_COLUMN: tf.FixedLenFeature([], dtype=tf.string),
-    movielens.ITEM_COLUMN: tf.FixedLenFeature([], dtype=tf.string),
-    rconst.DUPLICATE_MASK: tf.FixedLenFeature([], dtype=tf.string)
+    movielens.USER_COLUMN: tf.io.FixedLenFeature([], dtype=tf.string),
+    movielens.ITEM_COLUMN: tf.io.FixedLenFeature([], dtype=tf.string),
+    rconst.DUPLICATE_MASK: tf.io.FixedLenFeature([], dtype=tf.string)
 }
 
 
@@ -138,7 +138,7 @@ class DatasetManager(object):
         deserialize the data.
     """
     feature_map = _TRAIN_FEATURE_MAP if self._is_training else _EVAL_FEATURE_MAP
-    features = tf.parse_single_example(serialized_data, feature_map)
+    features = tf.io.parse_single_example(serialized_data, feature_map)
 
     users = tf.reshape(tf.decode_raw(
         features[movielens.USER_COLUMN], rconst.USER_DTYPE), (batch_size,))

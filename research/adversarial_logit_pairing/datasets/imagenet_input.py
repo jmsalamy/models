@@ -125,23 +125,23 @@ def imagenet_parser(value, image_size, is_training):
   """
   keys_to_features = {
       'image/encoded':
-          tf.FixedLenFeature((), tf.string, ''),
+          tf.io.FixedLenFeature((), tf.string, ''),
       'image/format':
-          tf.FixedLenFeature((), tf.string, 'jpeg'),
+          tf.io.FixedLenFeature((), tf.string, 'jpeg'),
       'image/class/label':
-          tf.FixedLenFeature([], tf.int64, -1),
+          tf.io.FixedLenFeature([], tf.int64, -1),
       'image/class/text':
-          tf.FixedLenFeature([], tf.string, ''),
+          tf.io.FixedLenFeature([], tf.string, ''),
       'image/object/bbox/xmin':
-          tf.VarLenFeature(dtype=tf.float32),
+          tf.io.VarLenFeature(dtype=tf.float32),
       'image/object/bbox/ymin':
-          tf.VarLenFeature(dtype=tf.float32),
+          tf.io.VarLenFeature(dtype=tf.float32),
       'image/object/bbox/xmax':
-          tf.VarLenFeature(dtype=tf.float32),
+          tf.io.VarLenFeature(dtype=tf.float32),
       'image/object/bbox/ymax':
-          tf.VarLenFeature(dtype=tf.float32),
+          tf.io.VarLenFeature(dtype=tf.float32),
       'image/object/class/label':
-          tf.VarLenFeature(dtype=tf.int64),
+          tf.io.VarLenFeature(dtype=tf.int64),
   }
 
   parsed = tf.parse_single_example(value, keys_to_features)

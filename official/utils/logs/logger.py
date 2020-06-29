@@ -160,9 +160,9 @@ class BenchmarkFileLogger(BaseBenchmarkLogger):
   def __init__(self, logging_dir):
     super(BenchmarkFileLogger, self).__init__()
     self._logging_dir = logging_dir
-    if not tf.gfile.IsDirectory(self._logging_dir):
-      tf.gfile.MakeDirs(self._logging_dir)
-    self._metric_file_handler = tf.gfile.GFile(
+    if not tf.compat.v1.gfile.IsDirectory(self._logging_dir):
+      tf.compat.v1.gfile.MakeDirs(self._logging_dir)
+    self._metric_file_handler = tf.compat.v1.gfile.GFile(
         os.path.join(self._logging_dir, METRIC_LOG_FILE_NAME), "a")
 
   def log_metric(self, name, value, unit=None, global_step=None, extras=None):
@@ -204,7 +204,7 @@ class BenchmarkFileLogger(BaseBenchmarkLogger):
     """
     run_info = _gather_run_info(model_name, dataset_name, run_params, test_id)
 
-    with tf.gfile.GFile(os.path.join(
+    with tf.compat.v1.gfile.GFile(os.path.join(
         self._logging_dir, BENCHMARK_RUN_LOG_FILE_NAME), "w") as f:
       try:
         json.dump(run_info, f)
@@ -344,7 +344,7 @@ def _process_metric_to_json(
 
 def _collect_tensorflow_info(run_info):
   run_info["tensorflow_version"] = {
-      "version": tf.VERSION, "git_hash": tf.GIT_VERSION}
+      "version": tf.version.VERSION, "git_hash": tf.version.GIT_VERSION}
 
 
 def _collect_run_params(run_info, run_params):
@@ -383,8 +383,8 @@ def _collect_cpu_info(run_info):
     import cpuinfo    # pylint: disable=g-import-not-at-top
 
     info = cpuinfo.get_cpu_info()
-    cpu_info["cpu_info"] = info["brand"]
-    cpu_info["mhz_per_cpu"] = info["hz_advertised_raw"][0] / 1.0e6
+    cpu_info["cpu_info"] = info["brand_raw"]
+    cpu_info["mhz_per_cpu"] = info["hz_advertised"][0] / 1.0e6
 
     run_info["machine_config"]["cpu_info"] = cpu_info
   except ImportError:

@@ -77,9 +77,9 @@ _TEST_CASES = [
 ]
 
 _FEATURE_MAP = {
-    _RAW_ROW: tf.FixedLenFeature([1], dtype=tf.int64),
-    _DUMMY_COL: tf.FixedLenFeature([1], dtype=tf.int64),
-    _DUMMY_VEC_COL: tf.FixedLenFeature([_DUMMY_VEC_LEN], dtype=tf.float32)
+    _RAW_ROW: tf.io.FixedLenFeature([1], dtype=tf.int64),
+    _DUMMY_COL: tf.io.FixedLenFeature([1], dtype=tf.int64),
+    _DUMMY_VEC_COL: tf.io.FixedLenFeature([_DUMMY_VEC_LEN], dtype=tf.float32)
 }
 
 

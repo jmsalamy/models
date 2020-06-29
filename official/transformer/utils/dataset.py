@@ -76,10 +76,10 @@ def _load_records(filename):
 def _parse_example(serialized_example):
   """Return inputs and targets Tensors from a serialized tf.Example."""
   data_fields = {
-      "inputs": tf.VarLenFeature(tf.int64),
-      "targets": tf.VarLenFeature(tf.int64)
+      "inputs": tf.io.VarLenFeature(tf.int64),
+      "targets": tf.io.VarLenFeature(tf.int64)
   }
-  parsed = tf.parse_single_example(serialized_example, data_fields)
+  parsed = tf.io.parse_single_example(serialized_example, data_fields)
   inputs = tf.sparse_tensor_to_dense(parsed["inputs"])
   targets = tf.sparse_tensor_to_dense(parsed["targets"])
   return inputs, targets

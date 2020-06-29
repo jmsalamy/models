@@ -50,9 +50,11 @@ DATASET_NAME = 'ImageNet'
 def get_filenames(is_training, data_dir):
   """Return filenames for dataset."""
   if is_training:
+    from itertools import chain
+    concat = chain(range(652),range(704,1024))
     return [
         os.path.join(data_dir, 'train-%05d-of-01024' % i)
-        for i in range(_NUM_TRAIN_FILES)]
+        for i in concat] #range(_NUM_TRAIN_FILES)]
   else:
     return [
         os.path.join(data_dir, 'val-%05d-of-00128' % i)
@@ -95,14 +97,14 @@ def _parse_example_proto(example_serialized):
   """
   # Dense features in Example proto.
   feature_map = {
-      'image/encoded': tf.FixedLenFeature([], dtype=tf.string,
+      'image/encoded': tf.io.FixedLenFeature([], dtype=tf.string,
                                           default_value=''),
-      'image/class/label': tf.FixedLenFeature([], dtype=tf.int64,
+      'image/class/label': tf.io.FixedLenFeature([], dtype=tf.int64,
                                               default_value=-1),
-      'image/class/text': tf.FixedLenFeature([], dtype=tf.string,
+      'image/class/text': tf.io.FixedLenFeature([], dtype=tf.string,
                                              default_value=''),
   }
-  sparse_float32 = tf.VarLenFeature(dtype=tf.float32)
+  sparse_float32 = tf.io.VarLenFeature(dtype=tf.float32)
   # Sparse features in Example proto.
   feature_map.update(
       {k: sparse_float32 for k in ['image/object/bbox/xmin',
@@ -110,7 +112,7 @@ def _parse_example_proto(example_serialized):
                                    'image/object/bbox/xmax',
                                    'image/object/bbox/ymax']})
 
-  features = tf.parse_single_example(example_serialized, feature_map)
+  features = tf.io.parse_single_example(example_serialized, feature_map)
   label = tf.cast(features['image/class/label'], dtype=tf.int32)
 
   xmin = tf.expand_dims(features['image/object/bbox/xmin'].values, 0)
@@ -188,7 +190,9 @@ def input_fn(is_training, data_dir, batch_size, num_epochs=1,
   # This number is low enough to not cause too much contention on small systems
   # but high enough to provide the benefits of parallelization. You may want
   # to increase this number if you have a large number of CPU cores.
-  dataset = dataset.apply(tf.contrib.data.parallel_interleave(
+  #dataset = dataset.apply(tf.contrib.data.parallel_interleave(
+  #   tf.data.TFRecordDataset, cycle_length=10))
+  dataset = dataset.apply(tf.data.experimental.parallel_interleave(
       tf.data.TFRecordDataset, cycle_length=10))
 
   return resnet_run_loop.process_record_dataset(
@@ -361,6 +365,6 @@ def main(_):
 
 
 if __name__ == '__main__':
-  tf.logging.set_verbosity(tf.logging.INFO)
+  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
   define_imagenet_flags()
   absl_app.run(main)

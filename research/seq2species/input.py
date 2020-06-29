@@ -177,9 +177,9 @@ class _InputEncoding(object):
       targets.
     """
     with tf.variable_scope('parse_single_tfexample'):
-      features_spec = {'sequence': tf.FixedLenFeature([], tf.string)}
+      features_spec = {'sequence': tf.io.FixedLenFeature([], tf.string)}
       for target in self.targets:
-        features_spec[target] = tf.FixedLenFeature([], tf.string)
+        features_spec[target] = tf.io.FixedLenFeature([], tf.string)
       features = tf.parse_single_example(
           serialized_example, features=features_spec)
       if self.noise_rate > 0.0:
