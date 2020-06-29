@@ -138,7 +138,7 @@ class DatasetManager(object):
         deserialize the data.
     """
     feature_map = _TRAIN_FEATURE_MAP if self._is_training else _EVAL_FEATURE_MAP
-    features = tf.parse_single_example(serialized_data, feature_map)
+    features = tf.io.parse_single_example(serialized_data, feature_map)
 
     users = tf.reshape(tf.decode_raw(
         features[movielens.USER_COLUMN], rconst.USER_DTYPE), (batch_size,))

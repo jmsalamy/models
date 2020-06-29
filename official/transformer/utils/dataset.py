@@ -79,7 +79,7 @@ def _parse_example(serialized_example):
       "inputs": tf.io.VarLenFeature(tf.int64),
       "targets": tf.io.VarLenFeature(tf.int64)
   }
-  parsed = tf.parse_single_example(serialized_example, data_fields)
+  parsed = tf.io.parse_single_example(serialized_example, data_fields)
   inputs = tf.sparse_tensor_to_dense(parsed["inputs"])
   targets = tf.sparse_tensor_to_dense(parsed["targets"])
   return inputs, targets

@@ -110,7 +110,7 @@ def _parse_example_proto(example_serialized):
                                    'image/object/bbox/xmax',
                                    'image/object/bbox/ymax']})
 
-  features = tf.parse_single_example(example_serialized, feature_map)
+  features = tf.io.parse_single_example(example_serialized, feature_map)
   label = tf.cast(features['image/class/label'], dtype=tf.int32)
 
   xmin = tf.expand_dims(features['image/object/bbox/xmin'].values, 0)
