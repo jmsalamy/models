@@ -344,7 +344,7 @@ def _process_metric_to_json(
 
 def _collect_tensorflow_info(run_info):
   run_info["tensorflow_version"] = {
-      "version": tf.VERSION, "git_hash": tf.GIT_VERSION}
+      "version": tf.version.VERSION, "git_hash": tf.version.GIT_VERSION}
 
 
 def _collect_run_params(run_info, run_params):
