@@ -205,7 +205,7 @@ def override_flags_and_set_envars_for_gpu_thread_pool(flags_obj):
     what has been set by the user on the command-line.
   """
   cpu_count = multiprocessing.cpu_count()
-  tf.logging.info('Logical CPU cores: %s', cpu_count)
+  tf.compat.v1.logging.info('Logical CPU cores: %s', cpu_count)
 
   # Sets up thread pool for each GPU for op scheduling.
   per_gpu_thread_count = 1
@@ -213,8 +213,8 @@ def override_flags_and_set_envars_for_gpu_thread_pool(flags_obj):
   total_gpu_thread_count = per_gpu_thread_count * flags_obj.num_gpus
   os.environ['TF_GPU_THREAD_MODE'] = flags_obj.tf_gpu_thread_mode
   os.environ['TF_GPU_THREAD_COUNT'] = str(per_gpu_thread_count)
-  tf.logging.info('TF_GPU_THREAD_COUNT: %s', os.environ['TF_GPU_THREAD_COUNT'])
-  tf.logging.info('TF_GPU_THREAD_MODE: %s', os.environ['TF_GPU_THREAD_MODE'])
+  tf.compat.v1.logging.info('TF_GPU_THREAD_COUNT: %s', os.environ['TF_GPU_THREAD_COUNT'])
+  tf.compat.v1.logging.info('TF_GPU_THREAD_MODE: %s', os.environ['TF_GPU_THREAD_MODE'])
 
   # Reduces general thread pool by number of threads used for GPU pool.
   main_thread_count = cpu_count - total_gpu_thread_count
@@ -574,13 +574,13 @@ def resnet_main(
     schedule[-1] = flags_obj.train_epochs - sum(schedule[:-1])  # over counting.
 
   for cycle_index, num_train_epochs in enumerate(schedule):
-    tf.logging.info('Starting cycle: %d/%d', cycle_index, int(n_loops))
+    tf.compat.v1.logging.info('Starting cycle: %d/%d', cycle_index, int(n_loops))
 
     if num_train_epochs:
       classifier.train(input_fn=lambda: input_fn_train(num_train_epochs),
                        hooks=train_hooks, steps=flags_obj.max_train_steps)
 
-    tf.logging.info('Starting to evaluate.')
+    tf.compat.v1.logging.info('Starting to evaluate.')
 
     # flags_obj.max_train_steps is generally associated with testing and
     # profiling. As a result it is frequently called with synthetic data, which
