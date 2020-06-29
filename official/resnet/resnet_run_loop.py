@@ -425,8 +425,8 @@ def resnet_model_fn(features, labels, mode, model_class,
   else:
     train_op = None
 
-  accuracy = tf.metrics.accuracy(labels, predictions['classes'])
-  accuracy_top_5 = tf.metrics.mean(tf.nn.in_top_k(predictions=logits,
+  accuracy = tf.compat.v1.metrics.accuracy(labels, predictions['classes'])
+  accuracy_top_5 = tf.compat.v1.metrics.mean(tf.nn.in_top_k(predictions=logits,
                                                   targets=labels,
                                                   k=5,
                                                   name='top_5_op'))
