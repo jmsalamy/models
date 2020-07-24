@@ -19,6 +19,7 @@ nvmlDeviceGetCount = nvml.nvmlDeviceGetCount
 nvmlDeviceGetCount.restype = nvmlReturn_t
 nvmlDeviceGetCount.argtypes = (POINTER(c_uint),)
 
+
 # c returns function values in parameters and takes arguments as pointers, not actual objects
 # count of accessible devices in system
 device_count = c_uint()
@@ -123,17 +124,29 @@ nvmlDeviceGetIndex = nvml.nvmlDeviceGetIndex
 nvmlDeviceGetIndex.restype = nvmlReturn_t
 nvmlDeviceGetIndex.argtypes = (nvmlDevice_t, POINTER(c_uint))
 
+#print(device_count)
+#print(nvlink_count[0])
+
 # checks that nvlinks are properly connected
 for i in range(device_count):
-    for k in range(nvlink_count[i]):
+    print("~~~~")
+    print(nvlink_count[i])
+    for k in range(0,nvlink_count[i],2):
+        print("----")
+        print(i,k)
         cap_result = c_uint()
         assert NVML_SUCCESS == nvmlDeviceGetNvLinkCapability(devices[i], k, NVML_NVLINK_CAP_P2P_SUPPORTED, pointer(cap_result))
         assert cap_result
         pci_info_remote = nvmlPciInfo_t()
+        print(pci_info_remote)
+        print(devices[i])
         assert NVML_SUCCESS == nvmlDeviceGetNvLinkRemotePciInfo(devices[i], k, pointer(pci_info_remote))
         remoteDevice = nvmlDevice_t()
         remoteBusId = pci_info_remote.busIdLegacy
-        assert NVML_SUCCESS == nvmlDeviceGetHandleByPciBusId(remoteBusId, pointer(remoteDevice))
+        print(remoteDevice)
+        print(remoteBusId)
+        print(nvml.nvmlDeviceGetHandleByPciBusId_v2(remoteBusId, pointer(remoteDevice)))
+        assert NVML_SUCCESS == nvml.nvmlDeviceGetHandleByPciBusId_v2(remoteBusId, pointer(remoteDevice))
         assert NVML_SUCCESS == nvmlDeviceGetIndex(remoteDevice, pointer(nvlink_target[i][k]))
         nvlink_target[i][k] = nvlink_target[i][k].value
 
