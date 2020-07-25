@@ -3,6 +3,13 @@ import os
 from ctypes import *
 import numpy as np
 import pickle 
+import argparse
+
+#deal with setting duration and filename
+CLI = argparse.ArgumentParser(description="Count NVLink traffic iteratively")
+CLI.add_argument('trials',type=int,help="length of time to run in # trials")
+CLI.add_argument('--fname',type=str,default="counters",help="override default filename")
+args = CLI.parse_args()
  
 # loads nvidia nvml library 
 nvml = CDLL('libnvidia-ml.so')
@@ -130,22 +137,22 @@ nvmlDeviceGetIndex.argtypes = (nvmlDevice_t, POINTER(c_uint))
 # checks that nvlinks are properly connected
 for i in range(device_count):
     print("~~~~")
-    print(nvlink_count[i])
+    print(f'Number of NV links on GPU{i:d} is: {nvlink_count[i]:d}')
     for k in range(0,nvlink_count[i],2):
         print("----")
-        print(i,k)
+        print(f'GPU{i:d}:NVlinkid:{k:d}')
         cap_result = c_uint()
         assert NVML_SUCCESS == nvmlDeviceGetNvLinkCapability(devices[i], k, NVML_NVLINK_CAP_P2P_SUPPORTED, pointer(cap_result))
         assert cap_result
         pci_info_remote = nvmlPciInfo_t()
-        print(pci_info_remote)
-        print(devices[i])
+        #print(pci_info_remote)
+        #print(devices[i])
         assert NVML_SUCCESS == nvmlDeviceGetNvLinkRemotePciInfo(devices[i], k, pointer(pci_info_remote))
         remoteDevice = nvmlDevice_t()
         remoteBusId = pci_info_remote.busIdLegacy
-        print(remoteDevice)
-        print(remoteBusId)
-        print(nvml.nvmlDeviceGetHandleByPciBusId_v2(remoteBusId, pointer(remoteDevice)))
+        #print(remoteDevice)
+        print(b"remoteBusID: %b" % remoteBusId)
+        #print(nvml.nvmlDeviceGetHandleByPciBusId_v2(remoteBusId, pointer(remoteDevice)))
         assert NVML_SUCCESS == nvml.nvmlDeviceGetHandleByPciBusId_v2(remoteBusId, pointer(remoteDevice))
         assert NVML_SUCCESS == nvmlDeviceGetIndex(remoteDevice, pointer(nvlink_target[i][k]))
         nvlink_target[i][k] = nvlink_target[i][k].value
@@ -155,7 +162,7 @@ nvmlDeviceGetNvLinkUtilizationCounter = nvml.nvmlDeviceGetNvLinkUtilizationCount
 nvmlDeviceGetNvLinkUtilizationCounter.restype = nvmlReturn_t
 nvmlDeviceGetNvLinkUtilizationCounter.argtypes = (nvmlDevice_t, c_uint, c_uint, POINTER(c_ulonglong), POINTER(c_ulonglong))
 
-N_TRIALS = 1000
+N_TRIALS = args.trials
 
 rx = c_ulonglong()
 tx = c_ulonglong()
@@ -175,7 +182,6 @@ for i in range(device_count):
 import time
 t_old = time.time()
 time_stamps = np.empty((N_TRIALS+1,), np.float64)
-
 
 for n in range(N_TRIALS):
     time_stamps[n] = time.time()
@@ -225,7 +231,10 @@ for i in range(device_count):
         TM[1,:,i,nvlink_target[i][k]] += tx_counts[:,i,k]
 
 counters = {'timestamp': midpoint_times, 'tm': TM}
-with open('counters.pkl', 'wb') as f:
+
+fname = args.fname + ".pkl"
+
+with open(fname, 'wb') as f:
     pickle.dump(counters, f)
 #import pdb
 #pdb.set_trace()
@@ -233,6 +242,7 @@ with open('counters.pkl', 'wb') as f:
 
 t_new = time.time()
 t_elapsed = t_new - t_old
+print("Total Time Elapsed: %.6f" % t_elapsed)
 print("Elapsed time per interrogation of all links in both directions: %.6f" % (t_elapsed / N_TRIALS,))
 
 for i in range(device_count):
