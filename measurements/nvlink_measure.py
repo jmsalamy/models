@@ -4,10 +4,11 @@ from ctypes import *
 import numpy as np
 import pickle 
 import argparse
+import time
 
 #deal with setting duration and filename
 CLI = argparse.ArgumentParser(description="Count NVLink traffic iteratively")
-CLI.add_argument('trials',type=int,help="length of time to run in # trials")
+CLI.add_argument('duration',type=int,help="min length of time to cover (s)")
 CLI.add_argument('--fname',type=str,default="counters",help="override default filename")
 args = CLI.parse_args()
  
@@ -157,94 +158,7 @@ for i in range(device_count):
         assert NVML_SUCCESS == nvmlDeviceGetIndex(remoteDevice, pointer(nvlink_target[i][k]))
         nvlink_target[i][k] = nvlink_target[i][k].value
 
-# get nvlink utilization counters
-nvmlDeviceGetNvLinkUtilizationCounter = nvml.nvmlDeviceGetNvLinkUtilizationCounter
-nvmlDeviceGetNvLinkUtilizationCounter.restype = nvmlReturn_t
-nvmlDeviceGetNvLinkUtilizationCounter.argtypes = (nvmlDevice_t, c_uint, c_uint, POINTER(c_ulonglong), POINTER(c_ulonglong))
-
-N_TRIALS = args.trials
-
-rx = c_ulonglong()
-tx = c_ulonglong()
-prx, ptx = pointer(rx), pointer(tx)
-
-rx_samples = np.zeros((N_TRIALS, device_count, NVML_NVLINK_MAX_LINKS), np.uint64)
-tx_samples = np.zeros((N_TRIALS, device_count, NVML_NVLINK_MAX_LINKS), np.uint64)
-
-link_sample_order = np.full((device_count, NVML_NVLINK_MAX_LINKS), -1, int)
-order = 0
-for i in range(device_count):
-    device = devices[i]
-    for k in range(nvlink_count[i]):
-        link_sample_order[i,k] = order
-        order += 1
-
-import time
-t_old = time.time()
-time_stamps = np.empty((N_TRIALS+1,), np.float64)
-
-for n in range(N_TRIALS):
-    time_stamps[n] = time.time()
-    for i in range(device_count):
-        device = devices[i]
-        for k in range(nvlink_count[i]):
-            #if nvlink_target[i][k] ==0:
-                assert NVML_SUCCESS == nvmlDeviceGetNvLinkUtilizationCounter(device, k, counter_index, prx, ptx)
-                rx_samples[n,i,k] = rx.value
-                tx_samples[n,i,k] = tx.value
-
-time_stamps[-1] = time.time()
-
-dtime_stamps = np.diff(time_stamps)
-eval_times = dtime_stamps[:,None,None] * (link_sample_order / order)[None,:,:]
-
-midpoint_times = (time_stamps[:-1] + time_stamps[1:]) * .5
-
-rx_samples_interp = np.zeros((N_TRIALS, device_count, NVML_NVLINK_MAX_LINKS), np.float64)
-tx_samples_interp = np.zeros((N_TRIALS, device_count, NVML_NVLINK_MAX_LINKS), np.float64)
-for i in range(device_count):
-    for k in range(nvlink_count[i]):
-        rx_samples_interp[:,i,k] = np.interp(midpoint_times, time_stamps[:-1] + eval_times[:,i,k], rx_samples[:,i,k])
-        tx_samples_interp[:,i,k] = np.interp(midpoint_times, time_stamps[:-1] + eval_times[:,i,k], tx_samples[:,i,k])
-
-#rx_rates = np.diff(rx_samples_interp, axis=0) / np.diff(midpoint_times)[:,None,None]
-#
-#tx_rates = np.diff(tx_samples_interp, axis=0) / np.diff(midpoint_times)[:,None,None]
-#
-#TM = np.zeros((2, N_TRIALS-1, device_count, device_count), np.float64)
-#for i in range(device_count):
-#    for k in range(nvlink_count[i]):
-#        TM[0,:,i,nvlink_target[i][k]] += rx_rates[:,i,k]
-#        TM[1,:,i,nvlink_target[i][k]] += tx_rates[:,i,k]
-#print(TM)
-#np.save('TM.npy', TM)
-rx_counts = np.diff(rx_samples, axis=0)
-tx_counts = np.diff(tx_samples, axis=0)
-print('no interpolation')
-#rx_counts = np.diff(rx_samples_interp, axis=0)
-#tx_counts = np.diff(tx_samples_interp, axis=0)
-
-TM = np.zeros((2, N_TRIALS-1, device_count, device_count), np.float64)
-for i in range(device_count):
-    for k in range(nvlink_count[i]):
-        TM[0,:,i,nvlink_target[i][k]] += rx_counts[:,i,k]
-        TM[1,:,i,nvlink_target[i][k]] += tx_counts[:,i,k]
-
-counters = {'timestamp': midpoint_times, 'tm': TM}
-
-fname = args.fname + ".pkl"
-
-with open(fname, 'wb') as f:
-    pickle.dump(counters, f)
-#import pdb
-#pdb.set_trace()
-
-
-t_new = time.time()
-t_elapsed = t_new - t_old
-print("Total Time Elapsed: %.6f" % t_elapsed)
-print("Elapsed time per interrogation of all links in both directions: %.6f" % (t_elapsed / N_TRIALS,))
-
+#print arrangement
 for i in range(device_count):
     for j in range(device_count):
         if j==i:
@@ -255,6 +169,103 @@ for i in range(device_count):
                 links += (nvlink_target[i][k] == j)
             print("NV%d " % (links,), end='')
     print()
+
+# get nvlink utilization counters
+nvmlDeviceGetNvLinkUtilizationCounter = nvml.nvmlDeviceGetNvLinkUtilizationCounter
+nvmlDeviceGetNvLinkUtilizationCounter.restype = nvmlReturn_t
+nvmlDeviceGetNvLinkUtilizationCounter.argtypes = (nvmlDevice_t, c_uint, c_uint, POINTER(c_ulonglong), POINTER(c_ulonglong))
+
+start_time = time.time()
+stop_time = start_time + args.duration
+cycle_count = 0
+while (time.time() < stop_time):
+    print(f'Current Cycle: {cycle_count:d}')
+    cycle_count += 1
+    #trials for approx 10 minutes
+    N_TRIALS = 30000
+
+    rx = c_ulonglong()
+    tx = c_ulonglong()
+    prx, ptx = pointer(rx), pointer(tx)
+
+    rx_samples = np.zeros((N_TRIALS, device_count, NVML_NVLINK_MAX_LINKS), np.uint64)
+    tx_samples = np.zeros((N_TRIALS, device_count, NVML_NVLINK_MAX_LINKS), np.uint64)
+
+    link_sample_order = np.full((device_count, NVML_NVLINK_MAX_LINKS), -1, int)
+    order = 0
+    for i in range(device_count):
+        device = devices[i]
+        for k in range(nvlink_count[i]):
+            link_sample_order[i,k] = order
+            order += 1
+
+
+    t_old = time.time()
+    time_stamps = np.empty((N_TRIALS+1,), np.float64)
+
+    for n in range(N_TRIALS):
+        time_stamps[n] = time.time()
+        for i in range(device_count):
+            device = devices[i]
+            for k in range(nvlink_count[i]):
+                #if nvlink_target[i][k] ==0:
+                    assert NVML_SUCCESS == nvmlDeviceGetNvLinkUtilizationCounter(device, k, counter_index, prx, ptx)
+                    rx_samples[n,i,k] = rx.value
+                    tx_samples[n,i,k] = tx.value
+
+    time_stamps[-1] = time.time()
+
+    dtime_stamps = np.diff(time_stamps)
+    eval_times = dtime_stamps[:,None,None] * (link_sample_order / order)[None,:,:]
+
+    midpoint_times = (time_stamps[:-1] + time_stamps[1:]) * .5
+
+    rx_samples_interp = np.zeros((N_TRIALS, device_count, NVML_NVLINK_MAX_LINKS), np.float64)
+    tx_samples_interp = np.zeros((N_TRIALS, device_count, NVML_NVLINK_MAX_LINKS), np.float64)
+    for i in range(device_count):
+        for k in range(nvlink_count[i]):
+            rx_samples_interp[:,i,k] = np.interp(midpoint_times, time_stamps[:-1] + eval_times[:,i,k], rx_samples[:,i,k])
+            tx_samples_interp[:,i,k] = np.interp(midpoint_times, time_stamps[:-1] + eval_times[:,i,k], tx_samples[:,i,k])
+
+    #rx_rates = np.diff(rx_samples_interp, axis=0) / np.diff(midpoint_times)[:,None,None]
+    #
+    #tx_rates = np.diff(tx_samples_interp, axis=0) / np.diff(midpoint_times)[:,None,None]
+    #
+    #TM = np.zeros((2, N_TRIALS-1, device_count, device_count), np.float64)
+    #for i in range(device_count):
+    #    for k in range(nvlink_count[i]):
+    #        TM[0,:,i,nvlink_target[i][k]] += rx_rates[:,i,k]
+    #        TM[1,:,i,nvlink_target[i][k]] += tx_rates[:,i,k]
+    #print(TM)
+    #np.save('TM.npy', TM)
+    rx_counts = np.diff(rx_samples, axis=0)
+    tx_counts = np.diff(tx_samples, axis=0)
+    print('no interpolation')
+    #rx_counts = np.diff(rx_samples_interp, axis=0)
+    #tx_counts = np.diff(tx_samples_interp, axis=0)
+
+    TM = np.zeros((2, N_TRIALS-1, device_count, device_count), np.float64)
+    for i in range(device_count):
+        for k in range(nvlink_count[i]):
+            TM[0,:,i,nvlink_target[i][k]] += rx_counts[:,i,k]
+            TM[1,:,i,nvlink_target[i][k]] += tx_counts[:,i,k]
+
+    counters = {'timestamp': midpoint_times, 'tm': TM}
+
+    fname = args.fname + str(counter_index) + ".pkl"
+
+    with open(fname, 'wb') as f:
+        pickle.dump(counters, f)
+    #import pdb
+    #pdb.set_trace()
+
+
+    t_new = time.time()
+    t_elapsed = t_new - t_old
+    print("Total Time Elapsed: %.6f" % t_elapsed)
+    print("Elapsed time per interrogation of all links in both directions: %.6f" % (t_elapsed / N_TRIALS,))
+
+
 
 # shutdown nvml object module
 nvmlShutdown = nvml.nvmlShutdown
