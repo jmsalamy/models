@@ -180,9 +180,8 @@ stop_time = start_time + args.duration
 cycle_count = 0
 while (time.time() < stop_time):
     print(f'Current Cycle: {cycle_count:d}')
-    cycle_count += 1
     #trials for approx 10 minutes
-    N_TRIALS = 30000
+    N_TRIALS = 15000
 
     rx = c_ulonglong()
     tx = c_ulonglong()
@@ -252,7 +251,7 @@ while (time.time() < stop_time):
 
     counters = {'timestamp': midpoint_times, 'tm': TM}
 
-    fname = args.fname + str(counter_index) + ".pkl"
+    fname = args.fname + str(cycle_count) + ".pkl"
 
     with open(fname, 'wb') as f:
         pickle.dump(counters, f)
@@ -265,7 +264,7 @@ while (time.time() < stop_time):
     print("Total Time Elapsed: %.6f" % t_elapsed)
     print("Elapsed time per interrogation of all links in both directions: %.6f" % (t_elapsed / N_TRIALS,))
 
-
+    cycle_count += 1
 
 # shutdown nvml object module
 nvmlShutdown = nvml.nvmlShutdown
